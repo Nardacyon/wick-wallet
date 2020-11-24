@@ -1,68 +1,70 @@
 let db;
-// create a new db request for a "budget" database.
+const indexedDB =
+    window.indexedDB ||
+    window.mozIndexedDB ||
+    window.webkitIndexedDB ||
+    window.msIndexedDB ||
+    window.shimIndexedDB;
+    
 const request = indexedDB.open("budget", 1);
 
-request.onupgradeneeded = function(event) {
-   // create object store called "pending" and set autoIncrement to true
-  const db = event.target.result;
-  db.createObjectStore("pending", { autoIncrement: true });
+// create schema
+request.onupgradeneeded = (event) => {
+    // Creates an object store with a listID keypath that can be used to query on.
+    event.target.result.createObjectStore("pending", {
+        keyPath: "id",
+        autoIncrement: true
+    });
 };
 
-request.onsuccess = function(event) {
-  db = event.target.result;
-
-  // check if app is online before reading from db
-  if (navigator.onLine) {
-    checkDatabase();
-  }
+request.onerror = function (error) {
+    console.log("Something went wrong here:" + error.message);
 };
 
-request.onerror = function(event) {
-  console.log("Woops! " + event.target.errorCode);
+// opens a transaction with 
+request.onsuccess = function (event) {
+    db = event.target.result;
+    //check if we are online before reading from db
+    if (navigator.onLine) {
+        checkDatabase();
+    }
 };
 
+//this is called when app is offline and user saves a transaction
 function saveRecord(record) {
-  // create a transaction on the pending db with readwrite access
-  const transaction = db.transaction(["pending"], "readwrite");
-
-  // access your pending object store
-  const store = transaction.objectStore("pending");
-
-  // add record to your store with add method.
-  store.add(record);
+    //create a transaction on the pending db with r/w access
+    const transaction = db.transaction("pending", "readwrite");
+    const store = transaction.objectStore("pending");
+    store.add(record);
 }
 
+//when app is online we run this
 function checkDatabase() {
-  // open a transaction on your pending db
-  const transaction = db.transaction(["pending"], "readwrite");
-  // access your pending object store
-  const store = transaction.objectStore("pending");
-  // get all records from store and set to a variable
-  const getAll = store.getAll();
+    //open a transaction on the pending db
+    const transaction = db.transaction("pending", "readwrite");
+    const store = transaction.objectStore("pending");
+    // get all records from store
+    const getAllRecords = store.getAll();
 
-  getAll.onsuccess = function() {
-    if (getAll.result.length > 0) {
-      fetch("/api/transaction/bulk", {
-        method: "POST",
-        body: JSON.stringify(getAll.result),
-        headers: {
-          Accept: "application/json, text/plain, */*",
-          "Content-Type": "application/json"
+    getAllRecords.onsuccess = function () {
+        if (getAllRecords.result.length > 0) {
+            fetch("/api/transaction/bulk", {
+                method: "POST",
+                body: JSON.stringify(getAllRecords.result),
+                headers: {
+                    Accept: "application/json, text/plain, */*",
+                    "Content-Type": "application/json"
+                }
+            })
+                .then(response => response.json())
+                .then(() => {
+                    //if success then open a transaction on pending db
+                    const transaction = db.transaction(["pending"], "readwrite");
+                    const store = transaction.objectStore("pending");
+                    store.clear();
+                });
         }
-      })
-      .then(response => response.json())
-      .then(() => {
-        // if successful, open a transaction on your pending db
-        const transaction = db.transaction(["pending"], "readwrite");
-
-        // access your pending object store
-        const store = transaction.objectStore("pending");
-
-        // clear all items in your store
-        store.clear();
-      });
-    }
-  };
+    };
 }
 
 // listen for app coming back online

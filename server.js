@@ -17,11 +17,18 @@ app.use(express.static("public"));
 
 mongoose.connect("mongodb://localhost/budget", {
     useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useCreateIndex: true,
     useFindAndModify: false
 });
 
 //routes
 app.use(require("./routes/api.js"));
+
+//html route
+app.get("/", function(req, res) {
+    res.sendFile(path.join(__dirname, "../public/index.html"));
+});
 
 app.listen(PORT, () => {
     console.log(`App running on port ${PORT}!`);

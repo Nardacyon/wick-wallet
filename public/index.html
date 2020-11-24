@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <meta name="theme-color" content="#317EFB">
   <link rel="shortcut icon" href="./assets/images/icons/icon-192x192.png" type="image/x-icon">
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="./manifest.json">
 
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="./assets/css/styles.css">
@@ -47,11 +47,13 @@
   <script src="./assets/js/db.js"></script>
   <script>
     //register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
-        console.log('ServiceWorker registration successful!');
-      }).catch(function(err) {
-        console.log('ServiceWorker registration failed: ', err);
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js", {
+          scope: "."
+        }).then(reg => {
+          console.log("Service Worker Found!", reg);
+        });
       });
     }
   </script>
